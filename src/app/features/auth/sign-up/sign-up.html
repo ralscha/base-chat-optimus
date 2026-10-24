@@ -1,0 +1,306 @@
+<p-card class="block" styleClass="shadow-xl">
+  <div class="flex flex-col gap-4">
+    <h2 class="text-2xl font-semibold text-center">Create account</h2>
+
+    <!-- Mode toggle -->
+    <div role="group" aria-label="Registration method" class="grid grid-cols-2 gap-2">
+      <button
+        pButton
+        type="button"
+        class="gap-2"
+        [outlined]="registrationMode() !== 'password'"
+        [attr.aria-pressed]="registrationMode() === 'password'"
+        (click)="switchMode('password')"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+          />
+        </svg>
+        Password
+      </button>
+      <button
+        pButton
+        type="button"
+        class="gap-2"
+        [outlined]="registrationMode() !== 'passkey'"
+        [attr.aria-pressed]="registrationMode() === 'passkey'"
+        (click)="switchMode('passkey')"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+          />
+        </svg>
+        Passkey
+      </button>
+    </div>
+
+    @if (error()) {
+      <p-message severity="error">
+        <ng-template #container>
+          <div class="flex items-start gap-2 text-sm">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5 shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+            {{ error() }}
+          </div>
+        </ng-template>
+      </p-message>
+    }
+
+    <form [formRoot]="signUpForm" (submit)="submit($event)" class="flex flex-col gap-4">
+      <!-- Common fields -->
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-medium" for="username">Username</label>
+        <input
+          pInputText
+          id="username"
+          type="text"
+          [formField]="signUpForm.username"
+          class="w-full"
+          placeholder="your_username"
+          [class.p-invalid]="
+            signUpForm.username().invalid() && (signUpForm.username().touched() || submitted())
+          "
+          autocomplete="username"
+        />
+        @if (
+          signUpForm.username().errors()[0]?.kind === 'required' &&
+          (signUpForm.username().touched() || submitted())
+        ) {
+          <p class="text-error text-xs">Username is required.</p>
+        } @else if (
+          signUpForm.username().errors()[0]?.kind === 'minLength' &&
+          (signUpForm.username().touched() || submitted())
+        ) {
+          <p class="text-error text-xs">Minimum 3 characters.</p>
+        } @else if (
+          signUpForm.username().errors()[0]?.kind === 'pattern' &&
+          (signUpForm.username().touched() || submitted())
+        ) {
+          <p class="text-error text-xs">Only letters, numbers and underscores.</p>
+        }
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-medium" for="email">Email</label>
+        <input
+          pInputText
+          id="email"
+          type="email"
+          [formField]="signUpForm.email"
+          class="w-full"
+          placeholder="you@example.com"
+          [class.p-invalid]="
+            signUpForm.email().invalid() && (signUpForm.email().touched() || submitted())
+          "
+          autocomplete="email"
+        />
+        @if (
+          signUpForm.email().errors()[0]?.kind === 'required' &&
+          (signUpForm.email().touched() || submitted())
+        ) {
+          <p class="text-error text-xs">Email is required.</p>
+        } @else if (
+          signUpForm.email().errors()[0]?.kind === 'email' &&
+          (signUpForm.email().touched() || submitted())
+        ) {
+          <p class="text-error text-xs">Enter a valid email address.</p>
+        }
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-medium" for="displayName">Display name</label>
+        <input
+          pInputText
+          id="displayName"
+          type="text"
+          [formField]="signUpForm.displayName"
+          class="w-full"
+          placeholder="Jane Doe"
+          [class.p-invalid]="
+            signUpForm.displayName().invalid() &&
+            (signUpForm.displayName().touched() || submitted())
+          "
+          autocomplete="name"
+        />
+        @if (
+          signUpForm.displayName().errors()[0]?.kind === 'required' &&
+          (signUpForm.displayName().touched() || submitted())
+        ) {
+          <p class="text-error text-xs">Display name is required.</p>
+        }
+      </div>
+
+      <!-- Password fields (password mode only) -->
+      @if (registrationMode() === 'password') {
+        <div class="flex flex-col gap-1">
+          <label class="text-sm font-medium" for="password">Password</label>
+          <input
+            pInputText
+            id="password"
+            type="password"
+            [formField]="signUpForm.password"
+            class="w-full"
+            placeholder="Min. 8 characters"
+            [class.p-invalid]="
+              signUpForm.password().invalid() && (signUpForm.password().touched() || submitted())
+            "
+            autocomplete="new-password"
+          />
+          @if (
+            signUpForm.password().errors()[0]?.kind === 'required' &&
+            (signUpForm.password().touched() || submitted())
+          ) {
+            <p class="text-error text-xs">Password is required.</p>
+          } @else if (
+            signUpForm.password().errors()[0]?.kind === 'minLength' &&
+            (signUpForm.password().touched() || submitted())
+          ) {
+            <p class="text-error text-xs">Minimum 8 characters.</p>
+          }
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label class="text-sm font-medium" for="confirmPassword">Confirm password</label>
+          <input
+            pInputText
+            id="confirmPassword"
+            type="password"
+            [formField]="signUpForm.confirmPassword"
+            class="w-full"
+            placeholder="••••••••"
+            [class.p-invalid]="
+              (passwordsMismatch() || signUpForm.confirmPassword().invalid()) &&
+              (signUpForm.confirmPassword().touched() || submitted())
+            "
+            autocomplete="new-password"
+          />
+          @if (
+            signUpForm.confirmPassword().errors()[0]?.kind === 'required' &&
+            (signUpForm.confirmPassword().touched() || submitted())
+          ) {
+            <p class="text-error text-xs">Please confirm your password.</p>
+          } @else if (
+            passwordsMismatch() && (signUpForm.confirmPassword().touched() || submitted())
+          ) {
+            <p class="text-error text-xs">Passwords do not match.</p>
+          }
+        </div>
+      }
+
+      <!-- Passkey info (passkey mode only) -->
+      @if (registrationMode() === 'passkey') {
+        <p-message severity="info">
+          <ng-template #container>
+            <div class="flex items-start gap-2 text-sm">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span
+                >Create a demo passkey to sign in without a password on this browser. No device
+                credential is created.</span
+              >
+            </div>
+          </ng-template>
+        </p-message>
+      }
+
+      <button type="submit" pButton class="w-full">
+        @if (registrationMode() === 'passkey') {
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+            />
+          </svg>
+        }
+        {{ registrationMode() === 'passkey' ? 'Register with Passkey' : 'Create account' }}
+      </button>
+    </form>
+
+    <p class="text-center text-sm">
+      Already have an account?
+      <a
+        routerLink="/auth/sign-in"
+        class="text-primary underline-offset-4 hover:underline inline-flex min-h-11 items-center rounded-lg px-2"
+        >Sign in</a
+      >
+    </p>
+  </div>
+</p-card>
+
+<p-dialog
+  header="Register passkey"
+  [visible]="showPasskeyPrompt()"
+  (visibleChange)="showPasskeyPrompt.set($event)"
+  [modal]="true"
+  [dismissableMask]="true"
+  [draggable]="false"
+  [resizable]="false"
+  appendTo="body"
+  [style]="{ width: '24rem', maxWidth: 'calc(100vw - 2rem)' }"
+>
+  <p class="text-sm text-base-content/70">
+    Create a demo passkey for this account. This local demo does not use device authentication or
+    create a real credential.
+  </p>
+  <p class="text-sm text-base-content/70 mt-4">
+    Select <strong>Register</strong> to create your demo account.
+  </p>
+  <ng-template #footer>
+    <button pButton type="button" severity="secondary" [text]="true" (click)="cancelPasskey()">
+      Cancel
+    </button>
+    <button pButton type="button" (click)="confirmPasskey()">Register</button>
+  </ng-template>
+</p-dialog>

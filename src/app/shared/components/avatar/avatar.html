@@ -1,0 +1,19 @@
+<div class="relative inline-flex shrink-0">
+  <p-avatar
+    [label]="initials()"
+    shape="circle"
+    [styleClass]="sizeClasses() + ' ' + color() + ' ' + foreground() + ' font-semibold select-none'"
+    [style]="{
+      width: size() === 'sm' ? '2rem' : size() === 'lg' ? '3.5rem' : '2.5rem',
+      height: size() === 'sm' ? '2rem' : size() === 'lg' ? '3.5rem' : '2.5rem',
+    }"
+  />
+  @if (showPresence()) {
+    <span
+      class="absolute bottom-0 right-0 rounded-full border-2 border-base-100"
+      [class]="presenceDotSize() + (online() ? ' bg-success' : ' bg-base-300')"
+      [attr.aria-label]="online() ? 'Online' : 'Offline'"
+      role="img"
+    ></span>
+  }
+</div>

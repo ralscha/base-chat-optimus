@@ -1,0 +1,405 @@
+@if (conversation() && partner()) {
+  <div class="flex flex-col h-full">
+    <!-- Header -->
+    <div
+      class="flex h-16 items-center gap-3 px-4 border-b border-primary/20 bg-primary text-primary-content shrink-0 shadow-sm"
+    >
+      <!-- Back button (mobile only) -->
+      <button
+        pButton
+        [text]="true"
+        [rounded]="true"
+        size="small"
+        type="button"
+        class="md:hidden! size-9! p-0! text-primary-content! hover:bg-primary-content/10!"
+        (click)="goBack()"
+        aria-label="Back"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-5 w-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M15 19l-7-7 7-7"
+          />
+        </svg>
+      </button>
+
+      <app-avatar
+        [initials]="partner()!.initials"
+        [color]="partner()!.color"
+        [online]="presence.isOnline(partner()!.userId)"
+        [showPresence]="true"
+        size="sm"
+      />
+
+      <div class="flex-1 min-w-0">
+        <p class="font-semibold truncate">{{ partner()!.displayName }}</p>
+        <p class="text-xs text-primary-content/70">
+          {{ presence.isOnline(partner()!.userId) ? 'Online' : 'Offline' }}
+        </p>
+      </div>
+
+      <!-- Delete conversation -->
+      <button
+        pButton
+        [text]="true"
+        [rounded]="true"
+        size="small"
+        type="button"
+        class="size-9! p-0! text-primary-content! hover:bg-primary-content/10!"
+        (click)="confirmDeleteConversation()"
+        aria-label="Delete conversation"
+        [attr.aria-expanded]="showDeleteModal()"
+        [attr.aria-controls]="showDeleteModal() ? 'delete-conversation-dialog' : null"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-5 w-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+          />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Message list -->
+    <div #messageList class="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3">
+      @if (messages().length === 0) {
+        <p class="text-center text-base-content/40 text-sm mt-10">No messages yet. Say hello!</p>
+      }
+      @for (msg of messages(); track msg.id) {
+        <article
+          [id]="'message-' + msg.id"
+          [attr.data-message-id]="msg.id"
+          tabindex="-1"
+          class="rounded-lg outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+          [attr.aria-label]="
+            'Message from ' + (isMine(msg.senderId) ? 'you' : partner()!.displayName)
+          "
+        >
+          <app-message-bubble
+            [message]="msg"
+            [isMine]="isMine(msg.senderId)"
+            [partnerName]="partner()!.displayName"
+            (deleteMessage)="deleteMessage($event)"
+            (reply)="startReply($event)"
+            (jumpToMessage)="jumpToMessage($event)"
+          />
+        </article>
+      }
+
+      <!-- Typing indicator -->
+      @if (chat.isPartnerTyping(conversationId())) {
+        <div class="flex items-center gap-2">
+          <div
+            class="bg-base-200 px-3 py-2 rounded-2xl rounded-bl-sm flex items-center gap-1 shadow-sm"
+          >
+            <span
+              class="inline-block w-2 h-2 bg-base-content/40 rounded-full animate-bounce"
+              style="animation-delay: 0ms"
+            ></span>
+            <span
+              class="inline-block w-2 h-2 bg-base-content/40 rounded-full animate-bounce"
+              style="animation-delay: 150ms"
+            ></span>
+            <span
+              class="inline-block w-2 h-2 bg-base-content/40 rounded-full animate-bounce"
+              style="animation-delay: 300ms"
+            ></span>
+          </div>
+          <span class="text-xs text-base-content/40">{{ partner()!.displayName }} is typing…</span>
+        </div>
+      }
+    </div>
+
+    <!-- Input bar -->
+    <div class="shrink-0 border-t border-base-300 bg-base-100 px-4 py-3">
+      @if (isBlocked()) {
+        <p-message severity="warn" class="block mb-2" size="small">
+          Unblock {{ partner()!.displayName }} in Contacts to send messages.
+        </p-message>
+      }
+      @if (composerError()) {
+        <p-message severity="error" class="block mb-2" size="small">{{
+          composerError()
+        }}</p-message>
+      }
+      @if (imageLoading()) {
+        <p role="status" class="text-sm text-base-content/60 mb-2">Loading image…</p>
+      }
+
+      @if (showChecklistComposer()) {
+        <app-checklist-composer
+          [conversationId]="conversationId()"
+          [blocked]="isBlocked()"
+          (canceled)="closeChecklistComposer()"
+          (sent)="closeChecklistComposer()"
+        />
+      }
+
+      @if (replyToId()) {
+        <div
+          class="flex items-center gap-2 border-l-4 border-primary bg-base-200 rounded-r-lg p-2 mb-2"
+          role="status"
+        >
+          <div class="flex-1 min-w-0 text-sm">
+            @if (replyTarget(); as original) {
+              <p class="font-medium">
+                Replying to {{ isMine(original.senderId) ? 'yourself' : partner()!.displayName }}
+              </p>
+              <p class="line-clamp-2 wrap-anywhere text-base-content/60">{{ preview(original) }}</p>
+            } @else {
+              <p class="text-base-content/60">
+                Original message unavailable. Cancel this reply to send a new message.
+              </p>
+            }
+          </div>
+          <button
+            pButton
+            [text]="true"
+            [rounded]="true"
+            severity="secondary"
+            size="small"
+            type="button"
+            class="size-8! p-0! shrink-0"
+            aria-label="Cancel reply"
+            (click)="cancelReply()"
+          >
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
+      }
+
+      <!-- Staged image preview -->
+      @if (stagedImage()) {
+        <div class="mb-2 flex items-start">
+          <div class="relative inline-block">
+            <img
+              [src]="stagedImage()"
+              alt="Image to send"
+              class="max-h-24 rounded-lg border border-base-300"
+            />
+            <button
+              pButton
+              [rounded]="true"
+              severity="danger"
+              size="small"
+              type="button"
+              class="absolute -top-1.5 -right-1.5 size-6! p-0!"
+              (click)="clearStagedImage()"
+              aria-label="Remove image"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-3 w-3"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      }
+
+      <div class="flex items-end gap-1 sm:gap-2">
+        <button
+          pButton
+          [text]="true"
+          [rounded]="true"
+          severity="secondary"
+          size="small"
+          type="button"
+          class="size-9! p-0! shrink-0"
+          aria-label="Create checklist"
+          [attr.aria-expanded]="showChecklistComposer()"
+          [disabled]="isBlocked()"
+          (click)="toggleChecklistComposer()"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="m3 6 1 1 2-2m-3 7 1 1 2-2m-3 7 1 1 2-2M10 6h11M10 12h11M10 18h11"
+            />
+          </svg>
+        </button>
+        <!-- Attach image -->
+        <button
+          pButton
+          [text]="true"
+          [rounded]="true"
+          severity="secondary"
+          size="small"
+          type="button"
+          class="size-9! p-0! shrink-0"
+          (click)="fileInput.click()"
+          aria-label="Attach image"
+          [disabled]="isBlocked()"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
+          </svg>
+        </button>
+
+        <!-- Emoji picker toggle -->
+        <div class="relative">
+          <button
+            pButton
+            [text]="true"
+            [rounded]="true"
+            severity="secondary"
+            size="small"
+            type="button"
+            class="size-9! p-0! shrink-0"
+            [class.text-primary]="showEmojiPicker()"
+            (click)="toggleEmojiPicker($event)"
+            aria-label="Insert emoji"
+            [attr.aria-expanded]="showEmojiPicker()"
+            [disabled]="isBlocked()"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </button>
+          <p-popover
+            #emojiPopover
+            ariaLabel="Emoji picker"
+            (onShow)="showEmojiPicker.set(true)"
+            (onHide)="showEmojiPicker.set(false)"
+          >
+            <app-emoji-picker (pick)="insertEmoji($event)" />
+          </p-popover>
+        </div>
+
+        <textarea
+          pTextarea
+          #messageInput
+          aria-label="Message"
+          class="flex-1 min-w-0 resize-none text-sm min-h-[42px] max-h-32 leading-snug"
+          [placeholder]="isBlocked() ? 'This contact is blocked' : 'Type a message…'"
+          rows="1"
+          [value]="messageText()"
+          (input)="updateMessageText($event)"
+          (keydown)="onKeyDown($event)"
+          (paste)="onPaste($event)"
+          [disabled]="isBlocked()"
+        ></textarea>
+
+        <input
+          #fileInput
+          type="file"
+          accept="image/*"
+          class="hidden"
+          (change)="onFileSelect($event)"
+          [disabled]="isBlocked()"
+        />
+
+        <button
+          pButton
+          [rounded]="true"
+          type="button"
+          class="size-10! p-0! shrink-0"
+          [disabled]="isBlocked() || imageLoading() || (!messageText().trim() && !stagedImage())"
+          (click)="send()"
+          aria-label="Send message"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete conversation modal -->
+  @if (showDeleteModal()) {
+    <p-dialog
+      id="delete-conversation-dialog"
+      header="Delete conversation?"
+      [visible]="showDeleteModal()"
+      (visibleChange)="showDeleteModal.set($event)"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      [style]="{ width: '28rem', maxWidth: 'calc(100vw - 2rem)' }"
+    >
+      <p class="text-sm text-base-content/70">
+        This conversation will be removed from your list. The other party's messages will not be
+        affected.
+      </p>
+      <ng-template #footer>
+        <button pButton type="button" [text]="true" severity="secondary" (click)="cancelDelete()">
+          Cancel
+        </button>
+        <button pButton type="button" severity="danger" (click)="doDeleteConversation()">
+          Delete
+        </button>
+      </ng-template>
+    </p-dialog>
+  }
+} @else {
+  <div class="flex flex-1 items-center justify-center text-base-content/40 text-sm p-10">
+    Conversation not found.
+  </div>
+}

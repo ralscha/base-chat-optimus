@@ -1,0 +1,136 @@
+<p-card class="block" styleClass="shadow-xl">
+  <div class="flex flex-col gap-4">
+    <h2 class="text-2xl font-semibold text-center">Sign in</h2>
+
+    @if (error()) {
+      <p-message severity="error">
+        <ng-template #container>
+          <div class="flex items-start gap-2 text-sm">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5 shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+            {{ error() }}
+          </div>
+        </ng-template>
+      </p-message>
+    }
+
+    <form [formRoot]="signInForm" (submit)="submit($event)" class="flex flex-col gap-4">
+      <div class="flex flex-col gap-1">
+        <label class="text-sm font-medium" for="username">Username</label>
+        <input
+          pInputText
+          id="username"
+          type="text"
+          [formField]="signInForm.username"
+          class="w-full"
+          placeholder="your_username"
+          [class.p-invalid]="
+            signInForm.username().invalid() && (signInForm.username().touched() || submitted())
+          "
+          autocomplete="username"
+        />
+        @if (signInForm.username().invalid() && (signInForm.username().touched() || submitted())) {
+          <p class="text-error text-xs">Username is required.</p>
+        }
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <div class="flex justify-between items-center">
+          <label class="text-sm font-medium" for="password">Password</label>
+          <a
+            routerLink="/auth/forgot-password"
+            class="text-primary underline-offset-4 hover:underline inline-flex min-h-11 items-center rounded-lg px-2 text-sm"
+            >Forgot password?</a
+          >
+        </div>
+        <input
+          pInputText
+          id="password"
+          type="password"
+          [formField]="signInForm.password"
+          class="w-full"
+          placeholder="••••••••"
+          [class.p-invalid]="
+            signInForm.password().invalid() && (signInForm.password().touched() || submitted())
+          "
+          autocomplete="current-password"
+        />
+        @if (signInForm.password().invalid() && (signInForm.password().touched() || submitted())) {
+          <p class="text-error text-xs">Password is required.</p>
+        }
+      </div>
+
+      <button type="submit" pButton class="w-full">Sign in</button>
+    </form>
+
+    <p-divider align="center"><span class="text-xs text-base-content/60">OR</span></p-divider>
+
+    <button
+      type="button"
+      pButton
+      [outlined]="true"
+      class="w-full gap-2"
+      (click)="openPasskeyModal()"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="h-5 w-5"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+        />
+      </svg>
+      Sign in with Passkey
+    </button>
+
+    <p class="text-center text-sm">
+      Don't have an account?
+      <a
+        routerLink="/auth/sign-up"
+        class="text-primary underline-offset-4 hover:underline inline-flex min-h-11 items-center rounded-lg px-2"
+        >Sign up</a
+      >
+    </p>
+  </div>
+</p-card>
+
+<p-dialog
+  header="Passkey Authentication"
+  [visible]="showPasskeyModal()"
+  (visibleChange)="showPasskeyModal.set($event)"
+  [modal]="true"
+  [dismissableMask]="true"
+  [draggable]="false"
+  [resizable]="false"
+  appendTo="body"
+  [style]="{ width: '28rem', maxWidth: 'calc(100vw - 2rem)' }"
+>
+  <p class="text-sm text-base-content/70">
+    Enter the username of an account with a registered demo passkey first. This local demo does not
+    use device authentication or create a real credential.
+  </p>
+  <ng-template #footer>
+    <button pButton type="button" severity="secondary" [text]="true" (click)="cancelPasskey()">
+      Cancel
+    </button>
+    <button pButton type="button" (click)="confirmPasskey()">Authenticate</button>
+  </ng-template>
+</p-dialog>

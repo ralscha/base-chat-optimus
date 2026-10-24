@@ -1,0 +1,212 @@
+<div class="flex gap-2 group" [class.justify-end]="isMine()" [class.justify-start]="!isMine()">
+  <div class="max-w-[90%] sm:max-w-[75%] min-w-0 relative" (contextmenu)="onRightClick($event)">
+    <div
+      class="px-3 py-2 rounded-2xl text-sm shadow-sm wrap-anywhere whitespace-pre-wrap"
+      [class.bg-primary]="isMine()"
+      [class.text-primary-content]="isMine()"
+      [class.rounded-br-sm]="isMine()"
+      [class.bg-base-200]="!isMine()"
+      [class.text-base-content]="!isMine()"
+      [class.rounded-bl-sm]="!isMine()"
+    >
+      @if (message().replyToId) {
+        @if (replyTarget(); as original) {
+          <button
+            type="button"
+            class="block w-full border-l-2 border-current bg-base-content/10 rounded-r-lg px-2 py-1 mb-2 text-left text-xs whitespace-normal"
+            [attr.aria-label]="'View original message from ' + replyAuthor()"
+            (click)="jumpToMessage.emit(original.id)"
+          >
+            <span class="block font-semibold">{{ replyAuthor() }}</span>
+            <span class="block line-clamp-2 wrap-anywhere">{{ preview(original) }}</span>
+          </button>
+        } @else {
+          <p class="border-l-2 border-current pl-2 mb-2 text-xs opacity-70 whitespace-normal">
+            Original message unavailable
+          </p>
+        }
+      }
+
+      @if (message().checklist) {
+        <app-checklist-card [message]="message()" />
+      } @else if (message().text) {
+        <p>{{ message().text }}</p>
+      }
+
+      @if (message().imageDataUrl) {
+        <img
+          [src]="message().imageDataUrl"
+          alt="Image attachment"
+          class="max-w-full rounded-lg mt-1 max-h-60 block"
+        />
+      }
+    </div>
+
+    <!-- Reaction chips -->
+    @if (reactionEntries().length > 0) {
+      <div
+        class="flex flex-wrap gap-1 mt-1"
+        [class.justify-end]="isMine()"
+        [class.justify-start]="!isMine()"
+      >
+        @for (r of reactionEntries(); track r.emoji) {
+          <button
+            type="button"
+            class="flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded-full border transition-colors"
+            [class.bg-primary]="r.mine"
+            [class.text-primary-content]="r.mine"
+            [class.border-primary]="r.mine"
+            [class.bg-base-200]="!r.mine"
+            [class.border-base-300]="!r.mine"
+            (click)="react(r.emoji)"
+            [attr.aria-label]="r.emoji + ' ' + r.count + ' reactions'"
+            [attr.aria-pressed]="r.mine"
+          >
+            {{ r.emoji }}&thinsp;{{ r.count }}
+          </button>
+        }
+      </div>
+    }
+
+    <div
+      class="flex items-center gap-1 mt-0.5"
+      [class.justify-end]="isMine()"
+      [class.justify-start]="!isMine()"
+    >
+      <span class="text-xs text-base-content/40">{{ message().timestamp | timeAgo }}</span>
+      <button
+        pButton
+        [text]="true"
+        [rounded]="true"
+        severity="secondary"
+        size="small"
+        type="button"
+        class="size-7! p-0!"
+        aria-label="Message actions"
+        [attr.aria-expanded]="menuOpen()"
+        (click)="toggleMenu($event)"
+      >
+        <span aria-hidden="true">⋯</span>
+      </button>
+      @if (isMine()) {
+        <span class="text-xs text-base-content/50">
+          @if (message().status === 'read') {
+            <!-- Double blue check -->
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-3.5 w-3.5 text-info inline"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path
+                d="M18 7l-1.41-1.42-6.34 6.34 1.41 1.41L18 7zm4.24-1.42L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.42zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z"
+              />
+            </svg>
+          } @else if (message().status === 'delivered') {
+            <!-- Double grey check -->
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-3.5 w-3.5 inline"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path
+                d="M18 7l-1.41-1.42-6.34 6.34 1.41 1.41L18 7zm4.24-1.42L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.42zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z"
+              />
+            </svg>
+          } @else {
+            <!-- Single grey check -->
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-3.5 w-3.5 inline"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          }
+        </span>
+      }
+    </div>
+
+    <!-- Keep actions in the scrollable flow, including for very tall checklist cards. -->
+    @if (menuOpen()) {
+      <div
+        #actionMenu
+        class="mt-1 w-max max-w-full bg-base-100 shadow-lg border border-base-300 rounded-xl overflow-hidden min-w-36"
+        [class.ml-auto]="isMine()"
+        [class.mr-auto]="!isMine()"
+        role="group"
+        aria-label="Message options"
+      >
+        <!-- Quick reactions -->
+        <div class="flex items-center gap-0.5 px-2 py-1.5 border-b border-base-200">
+          @for (emoji of quickEmojis; track emoji) {
+            <button
+              pButton
+              [text]="true"
+              severity="secondary"
+              size="small"
+              type="button"
+              class="text-lg! p-1!"
+              (click)="react(emoji)"
+              [attr.aria-label]="'React with ' + emoji"
+              [disabled]="blocked()"
+            >
+              {{ emoji }}
+            </button>
+          }
+        </div>
+        <button
+          pButton
+          [text]="true"
+          severity="secondary"
+          size="small"
+          type="button"
+          class="w-full justify-start!"
+          [disabled]="blocked()"
+          aria-label="Reply to message"
+          (click)="onReply()"
+        >
+          <span aria-hidden="true">↩</span>
+          Reply
+        </button>
+        <app-bookmark-button [messageId]="message().id" />
+        <!-- Delete (own messages only) -->
+        @if (isMine()) {
+          <button
+            pButton
+            [text]="true"
+            severity="danger"
+            size="small"
+            type="button"
+            class="w-full justify-start!"
+            (click)="onDelete()"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
+            </svg>
+            Delete
+          </button>
+        }
+      </div>
+    }
+  </div>
+</div>
